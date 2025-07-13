@@ -20,12 +20,12 @@ fs.ensureFileSync(DATA_FILE);
 // Initialiser fichier JSON si vide
 try {
   const contenu = fs.readFileSync(DATA_FILE, 'utf-8');
-  if (!contenu.trim()) {
-    fs.writeJsonSync(DATA_FILE, []);
-    memoireInscriptions = [];
-  } else {
-    memoireInscriptions = JSON.parse(contenu);
-  }
+if (contenu.trim()) {
+  memoireInscriptions = JSON.parse(contenu);
+} else {
+  memoireInscriptions = [];
+}
+
 } catch (err) {
   console.error("Erreur d'initialisation :", err);
   memoireInscriptions = [];
