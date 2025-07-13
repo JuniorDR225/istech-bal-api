@@ -11,13 +11,27 @@ const DATA_FILE = path.join(__dirname, 'inscriptions.json');
 app.use(cors());
 app.use(express.json());
 
-// Initialise le fichier JSON si vide
+// Tableau temporaire en mémoire (cache)
+let memoireInscriptions = [];
+
+// Créer le fichier s’il n’existe pas
 fs.ensureFileSync(DATA_FILE);
-if (!fs.existsSync(DATA_FILE) || fs.readFileSync(DATA_FILE, 'utf-8').trim() === '') {
-  fs.writeJsonSync(DATA_FILE, []);
+
+// Initialiser fichier JSON si vide
+try {
+  const contenu = fs.readFileSync(DATA_FILE, 'utf-8');
+  if (!contenu.trim()) {
+    fs.writeJsonSync(DATA_FILE, []);
+    memoireInscriptions = [];
+  } else {
+    memoireInscriptions = JSON.parse(contenu);
+  }
+} catch (err) {
+  console.error("Erreur d'initialisation :", err);
+  memoireInscriptions = [];
 }
 
-// Route POST pour recevoir une inscription
+// POST: nouvelle inscription
 app.post('/api/inscription', async (req, res) => {
   const newInscription = {
     ...req.body,
@@ -25,26 +39,35 @@ app.post('/api/inscription', async (req, res) => {
   };
 
   try {
-    const data = await fs.readJson(DATA_FILE);
-    data.push(newInscription);
-    await fs.writeJson(DATA_FILE, data, { spaces: 2 });
+    // Sauvegarde en mémoire
+    memoireInscriptions.push(newInscription);
+
+    // Sauvegarde dans le fichier
+    await fs.writeJson(DATA_FILE, memoireInscriptions, { spaces: 2 });
+
     res.status(201).json({ success: true, message: "Inscription enregistrée ✅" });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, error: 'Erreur lors de l’enregistrement.' });
   }
 });
 
-// Route GET pour récupérer les inscriptions
-app.get('/api/inscriptions', async (req, res) => {
+// GET: toutes les inscriptions
+app.get('/api/inscriptions', (req, res) => {
+  res.json(memoireInscriptions);
+});
+
+// DELETE: vider les inscriptions
+app.delete('/api/inscriptions', async (req, res) => {
   try {
-    const data = await fs.readJson(DATA_FILE);
-    res.json(data);
+    memoireInscriptions = [];
+    await fs.writeJson(DATA_FILE, [], { spaces: 2 });
+    res.json({ success: true, message: "Toutes les inscriptions ont été supprimées." });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Erreur lors de la lecture des données.' });
+    res.status(500).json({ success: false, error: 'Erreur lors de la suppression.' });
   }
 });
 
-// Lancer le serveur
 app.listen(PORT, () => {
   console.log(`✅ API démarrée sur http://localhost:${PORT}`);
 });
