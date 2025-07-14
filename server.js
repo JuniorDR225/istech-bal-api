@@ -42,7 +42,7 @@ pool.query(createTableQuery)
 // Route POST pour recevoir une inscription
 app.post('/api/inscription', async (req, res) => {
   const { nomComplet, classeFiliere, telephone, statut, presence } = req.body;
-
+  console.log(nomComplet, classeFiliere, telephone, statut, presence )
   if (!nomComplet || !statut || !presence) {
     return res.status(400).json({ success: false, error: 'Champs obligatoires manquants.' });
   }
@@ -67,6 +67,7 @@ app.post('/api/inscription', async (req, res) => {
 app.get('/api/inscriptions', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM inscriptions ORDER BY date_inscription DESC');
+    console.log(result.rows)
     res.json(result.rows);
   } catch (error) {
     console.error('Erreur récupération inscriptions:', error);
