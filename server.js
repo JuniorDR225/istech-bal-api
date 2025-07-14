@@ -33,6 +33,7 @@ if (contenu.trim()) {
 
 // POST: nouvelle inscription
 app.post('/api/inscription', async (req, res) => {
+  console.log("NOUVELLE INSCRIPTION REÇUE :", req.body);
   const newInscription = {
     ...req.body,
     date: new Date().toISOString()
