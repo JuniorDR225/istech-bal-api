@@ -9,9 +9,9 @@ const PORT = 3000;
 // Remplace par tes vraies valeurs Render (hébergeur, utilisateur, mot de passe, base)
 const pool = new Pool({
   user: 'inscriptions_db_user',
-  host: 'dpg-d1qbh42dbo4c73cb3tl0-a.render.com', // ton hostname Render PostgreSQL
+  host: 'dpg-d1qbh42dbo4c73cb3tl0-a', // ton hostname Render PostgreSQL
   database: 'inscriptions_db',
-  password: 'TON_MDP_ICI',
+  password: 'd3dvrlKTRzd5OIO82WrbRK0zVVlsTh1e',
   port: 5432,
   ssl: {
     rejectUnauthorized: false // important si Render utilise SSL
