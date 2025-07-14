@@ -1,82 +1,91 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs-extra');
-const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'inscriptions.json');
+
+// --- CONFIG POSTGRESQL RENDER ---
+// Remplace par tes vraies valeurs Render (hébergeur, utilisateur, mot de passe, base)
+const pool = new Pool({
+  user: 'inscriptions_db_user',
+  host: 'dpg-d1qbh42dbo4c73cb3tl0-a.render.com', // ton hostname Render PostgreSQL
+  database: 'inscriptions_db',
+  password: 'TON_MDP_ICI',
+  port: 5432,
+  ssl: {
+    rejectUnauthorized: false // important si Render utilise SSL
+  }
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Tableau temporaire en mémoire (cache)
-let memoireInscriptions = [];
+// Création de la table inscriptions si elle n'existe pas
+const createTableQuery = `
+CREATE TABLE IF NOT EXISTS inscriptions (
+  id SERIAL PRIMARY KEY,
+  nomComplet VARCHAR(255) NOT NULL,
+  classeFiliere VARCHAR(255),
+  telephone VARCHAR(50),
+  statut VARCHAR(50) NOT NULL,
+  presence VARCHAR(20) NOT NULL,
+  date_inscription TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+`;
 
-// Créer le fichier s’il n’existe pas
-fs.ensureFileSync(DATA_FILE);
+pool.query(createTableQuery)
+  .then(() => console.log('✅ Table inscriptions prête'))
+  .catch(err => console.error('❌ Erreur création table:', err));
 
-// Initialiser fichier JSON si vide
-try {
-  const contenu = fs.readFileSync(DATA_FILE, 'utf-8');
-if (contenu.trim()) {
-  memoireInscriptions = JSON.parse(contenu);
-} else {
-  memoireInscriptions = [];
-}
-
-} catch (err) {
-  console.error("Erreur d'initialisation :", err);
-  memoireInscriptions = [];
-}
-
-// POST: nouvelle inscription
+// Route POST pour recevoir une inscription
 app.post('/api/inscription', async (req, res) => {
-  console.log("NOUVELLE INSCRIPTION REÇUE :", req.body);
-  const newInscription = {
-    ...req.body,
-    date: new Date().toISOString()
-  };
+  const { nomComplet, classeFiliere, telephone, statut, presence } = req.body;
+
+  if (!nomComplet || !statut || !presence) {
+    return res.status(400).json({ success: false, error: 'Champs obligatoires manquants.' });
+  }
 
   try {
-    // Sauvegarde en mémoire
-    memoireInscriptions.push(newInscription);
+    const insertQuery = `
+      INSERT INTO inscriptions (nomComplet, classeFiliere, telephone, statut, presence)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
 
-    // Sauvegarde dans le fichier
-        try {
-          console.log('ok')
-          console.log(DATA_FILE)
-      await fs.writeJson(DATA_FILE, memoireInscriptions, { spaces: 2 });
-      console.log("✅ Inscription sauvegardée dans :", DATA_FILE);
-    } catch (writeErr) {
-      console.error("❌ Erreur lors de l’écriture dans le fichier :", writeErr);
-    }
-          console.log('ok')
-          console.log(DATA_FILE)
-    res.status(201).json({ success: true, message: "Inscription enregistrée ✅" });
+    const result = await pool.query(insertQuery, [nomComplet, classeFiliere || null, telephone || null, statut, presence]);
+
+    res.status(201).json({ success: true, message: 'Inscription enregistrée ✅', data: result.rows[0] });
   } catch (error) {
-    console.error(error);
+    console.error('Erreur insertion:', error);
     res.status(500).json({ success: false, error: 'Erreur lors de l’enregistrement.' });
   }
 });
 
-// GET: toutes les inscriptions
-app.get('/api/inscriptions', (req, res) => {
-  res.json(memoireInscriptions);
+// Route GET pour récupérer les inscriptions
+app.get('/api/inscriptions', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM inscriptions ORDER BY date_inscription DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération inscriptions:', error);
+    res.status(500).json({ success: false, error: 'Erreur lors de la lecture des données.' });
+  }
 });
 
-// DELETE: vider les inscriptions
+// Route DELETE pour vider toutes les inscriptions (utilisé par admin)
 app.delete('/api/inscriptions', async (req, res) => {
   try {
-    memoireInscriptions = [];
-    await fs.writeJson(DATA_FILE, [], { spaces: 2 });
-    res.json({ success: true, message: "Toutes les inscriptions ont été supprimées." });
+    await pool.query('DELETE FROM inscriptions');
+    res.json({ success: true, message: 'Toutes les inscriptions ont été supprimées.' });
   } catch (error) {
+    console.error('Erreur suppression inscriptions:', error);
     res.status(500).json({ success: false, error: 'Erreur lors de la suppression.' });
   }
 });
 
+// Lancer le serveur
 app.listen(PORT, () => {
   console.log(`✅ API démarrée sur http://localhost:${PORT}`);
 });
