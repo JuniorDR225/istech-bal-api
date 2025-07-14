@@ -45,12 +45,15 @@ app.post('/api/inscription', async (req, res) => {
 
     // Sauvegarde dans le fichier
         try {
+          console.log('ok')
+          console.log(DATA_FILE)
       await fs.writeJson(DATA_FILE, memoireInscriptions, { spaces: 2 });
       console.log("✅ Inscription sauvegardée dans :", DATA_FILE);
     } catch (writeErr) {
       console.error("❌ Erreur lors de l’écriture dans le fichier :", writeErr);
     }
-
+          console.log('ok')
+          console.log(DATA_FILE)
     res.status(201).json({ success: true, message: "Inscription enregistrée ✅" });
   } catch (error) {
     console.error(error);
