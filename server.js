@@ -86,6 +86,38 @@ app.delete('/api/inscriptions', async (req, res) => {
   }
 });
 
+const { Parser } = require('json2csv');
+
+app.get('/api/export', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM inscriptions ORDER BY date_inscription DESC');
+
+    if (!result.rows || result.rows.length === 0) {
+      return res.status(404).send('Aucune inscription à exporter.');
+    }
+
+    const fields = [
+      { label: 'Nom Complet', value: 'nomcomplet' },
+      { label: 'Classe/Filière', value: 'classefiliere' },
+      { label: 'Téléphone', value: 'telephone' },
+      { label: 'Statut', value: 'statut' },
+      { label: 'Présence', value: row => row.presence === 'present' ? 'Présent' : 'Absent' },
+      { label: "Date d'inscription", value: row => new Date(row.date_inscription).toLocaleString() }
+    ];
+
+    const json2csv = new Parser({ fields });
+    const csv = json2csv.parse(result.rows);
+
+    res.header('Content-Type', 'text/csv');
+    res.attachment('inscriptions_bal.csv');
+    return res.send(csv);
+  } catch (error) {
+    console.error('Erreur export CSV:', error);
+    res.status(500).send('Erreur lors de l’export.');
+  }
+});
+
+
 // Lancer le serveur
 app.listen(PORT, () => {
   console.log(`✅ API démarrée sur http://localhost:${PORT}`);
