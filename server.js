@@ -89,13 +89,14 @@ app.delete('/api/inscriptions', async (req, res) => {
 
 
 app.get('/api/export', async (req, res) => {
+  console.log('export');
   try {
     const result = await pool.query('SELECT * FROM inscriptions ORDER BY date_inscription DESC');
 
     if (!result.rows || result.rows.length === 0) {
       return res.status(404).send('Aucune inscription à exporter.');
     }
-
+  
     const cleaned = result.rows.map(row => ({
       nomComplet: row.nomcomplet || '',
       classeFiliere: row.classefiliere || '',
