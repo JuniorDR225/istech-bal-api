@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const { Parser } = require('json2csv');
 
 const app = express();
 const PORT = 3000;
@@ -86,7 +87,6 @@ app.delete('/api/inscriptions', async (req, res) => {
   }
 });
 
-const { Parser } = require('json2csv');
 
 app.get('/api/export', async (req, res) => {
   try {
@@ -96,17 +96,26 @@ app.get('/api/export', async (req, res) => {
       return res.status(404).send('Aucune inscription à exporter.');
     }
 
+    const cleaned = result.rows.map(row => ({
+      nomComplet: row.nomcomplet || '',
+      classeFiliere: row.classefiliere || '',
+      telephone: row.telephone || '',
+      statut: row.statut || '',
+      presence: row.presence === 'present' ? 'Présent' : 'Absent',
+      date_inscription: new Date(row.date_inscription).toLocaleString()
+    }));
+
     const fields = [
-      { label: 'Nom Complet', value: 'nomcomplet' },
-      { label: 'Classe/Filière', value: 'classefiliere' },
+      { label: 'Nom Complet', value: 'nomComplet' },
+      { label: 'Classe/Filière', value: 'classeFiliere' },
       { label: 'Téléphone', value: 'telephone' },
       { label: 'Statut', value: 'statut' },
-      { label: 'Présence', value: row => row.presence === 'present' ? 'Présent' : 'Absent' },
-      { label: "Date d'inscription", value: row => new Date(row.date_inscription).toLocaleString() }
+      { label: 'Présence', value: 'presence' },
+      { label: "Date d'inscription", value: 'date_inscription' }
     ];
 
     const json2csv = new Parser({ fields });
-    const csv = json2csv.parse(result.rows);
+    const csv = json2csv.parse(cleaned);
 
     res.header('Content-Type', 'text/csv');
     res.attachment('inscriptions_bal.csv');
@@ -116,6 +125,7 @@ app.get('/api/export', async (req, res) => {
     res.status(500).send('Erreur lors de l’export.');
   }
 });
+
 
 
 // Lancer le serveur
