@@ -127,6 +127,23 @@ app.get('/api/export', async (req, res) => {
   }
 });
 
+// Route DELETE pour supprimer une inscription spécifique par ID
+app.delete('/api/inscriptions/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('DELETE FROM inscriptions WHERE id = $1 RETURNING *;', [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Inscription non trouvée." });
+    }
+
+    res.json({ success: true, message: "Inscription supprimée avec succès." });
+  } catch (error) {
+    console.error('Erreur suppression individuelle :', error);
+    res.status(500).json({ success: false, message: "Erreur serveur lors de la suppression." });
+  }
+});
 
 
 // Lancer le serveur
